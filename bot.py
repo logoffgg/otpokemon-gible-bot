@@ -17,6 +17,7 @@ async def run():
         page = await browser.new_page()
 
         await page.goto("https://otpokemon.com")
+        send_to_discord("✅ BOT ONLINE")
 
         print("🔥 Sniper active... waiting for Gible")
 
