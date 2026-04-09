@@ -2,7 +2,8 @@ import asyncio
 from playwright.async_api import async_playwright
 import requests
 
-DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1491808197529436442/rZqYKINXUZgEF7ErxT-KxnErqog0FwXqq4HTs7klWkccoEaPK7PsBfRfickFePwvabXJ"
+import os
+DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 
 sent_messages = set()
 
