@@ -51,15 +51,24 @@ async def run():
                         all_texts.extend(lines)
 
                 # 🎯 Process all events
-                for text in all_texts:
-                    clean = re.sub(r'[^\w\s]', '', text.lower())
+for text in all_texts:
+    clean = re.sub(r'[^\w\s]', '', text.lower())
 
-                    if "defeated" in clean and "gible" in clean:
-                        if text not in sent_messages:
-                            sent_messages.add(text)
-                            print("🔥 DETECTED:", text)
-                            send_to_discord(text)
+    # 🔥 Gible detection
+    if "defeated" in clean and "gible" in clean:
+        if text not in sent_messages:
+            sent_messages.add(text)
+            print("🔥 DETECTED:", text)
+            send_to_discord(text)
 
+    # 🐣 Easter Dungeon detection
+    if "finished" in clean and "dungeon" in clean and "easter" in clean:
+        if text not in sent_messages:
+            sent_messages.add(text)
+            print("🐣 DUNGEON:", text)
+            requests.post(DISCORD_WEBHOOK, json={
+                "content": f"🐣 EASTER DUNGEON: {text}"
+            })
                 await asyncio.sleep(1)
 
             except Exception as e:
