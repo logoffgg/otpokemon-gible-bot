@@ -2,6 +2,7 @@ import asyncio
 from playwright.async_api import async_playwright
 import requests
 import os
+import re
 
 DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 
@@ -37,11 +38,16 @@ async def run():
                         all_texts.extend(lines)
 
                 # 🎯 Process all events
-                for text in all_texts:
-                    text_lower = text.lower()
 
-                    if "gible" in text_lower and "defeated" in text_lower:
-                        if text not in sent_messages:
+for text in all_texts:
+    # Remove emojis / special characters
+    clean = re.sub(r'[^\w\s]', '', text.lower())
+
+    if "defeated" in clean and "gible" in clean:
+        if text not in sent_messages:
+            sent_messages.add(text)
+            print("🔥 DETECTED:", text)
+            send_to_discord(text)
                             sent_messages.add(text)
                             print("🔥 DETECTED:", text)
                             send_to_discord(text)
