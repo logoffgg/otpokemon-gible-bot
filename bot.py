@@ -15,8 +15,9 @@ def send(msg):
     except:
         pass
 
+
 async def run():
-    while True:
+    while True:  # 🔁 auto-restart if browser crashes
         try:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(
@@ -29,22 +30,23 @@ async def run():
                 )
 
                 page = await browser.new_page()
-                await page.goto("https://otpokemon.com")
-                await asyncio.sleep(5)
+                await page.goto("https://otpokemon.com", wait_until="networkidle")
 
                 print("🔥 Sniper active...")
 
-                # 🔥 Inject observer
+                # 🔥 Inject observer (real-time)
                 await page.evaluate("""
                     window.gibleEvents = [];
 
                     const elements = document.querySelectorAll('.happening');
 
                     elements.forEach(el => {
+                        // capture existing
                         if (el.innerText && el.innerText.trim()) {
                             window.gibleEvents.push(el.innerText);
                         }
 
+                        // listen for changes
                         const observer = new MutationObserver(() => {
                             if (el.innerText && el.innerText.trim()) {
                                 window.gibleEvents.push(el.innerText);
@@ -64,39 +66,51 @@ async def run():
                 while True:
                     current_time = time.time()
 
-                    # 🟢 Heartbeat
+                    # 🟢 Heartbeat every 30 minutes
                     if current_time - last_ping > 1800:
-                        send("🟢 Bot online")
+                        send("🟢 Bot online | Gible sniper active")
                         last_ping = current_time
 
-                    # 🔥 Get events
+                    # 🔥 Get real-time events
                     events = await page.evaluate("window.gibleEvents")
 
-                    if events:
-                        for event in events:
+                    # 🔁 FALLBACK: scan DOM directly (VERY IMPORTANT)
+                    fallback_elements = await page.query_selector_all(".happening")
+                    fallback_events = []
+                    for el in fallback_elements:
+                        text = await el.inner_text()
+                        if text.strip():
+                            fallback_events.append(text)
+
+                    # merge both sources
+                    all_events = list(set(events + fallback_events))
+
+                    if all_events:
+                        for event in all_events:
                             key = re.sub(r'[^\w\s]', '', event.lower()).strip()
 
-                            # 🔥 Gible
+                            # 🔥 Gible detection
                             if "gible" in key and "defeat" in key:
                                 if key not in sent_messages:
                                     sent_messages.add(key)
-                                    print("🔥 DETECTED:", event)
-                                    send(f"🔥 GIBLE: {event}")
+                                    print("🔥 GIBLE:", event)
+                                    send(f"🔥 GIBLE SNIPED: {event}")
 
-                            # 🐣 Dungeon
+                            # 🐣 Easter dungeon
                             if "easter" in key and "finish" in key:
                                 if key not in sent_messages:
                                     sent_messages.add(key)
                                     print("🐣 DUNGEON:", event)
-                                    send(f"🐣 DUNGEON: {event}")
+                                    send(f"🐣 EASTER DUNGEON: {event}")
 
-                        # clear events
-                        await page.evaluate("window.gibleEvents = []")
+                    # clear real-time queue
+                    await page.evaluate("window.gibleEvents = []")
 
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
 
         except Exception as e:
             print("🔥 Browser crashed, restarting...", e)
             await asyncio.sleep(5)
+
 
 asyncio.run(run())
