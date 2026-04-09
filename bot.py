@@ -17,7 +17,7 @@ async def run():
         page = await browser.new_page()
 
         await page.goto("https://otpokemon.com")
-        send_to_discord("✅ BOT ONLINE")
+        requests.post(DISCORD_WEBHOOK, json={"content": "🟢 Bot is now online"})
 
         print("🔥 Sniper active... waiting for Gible")
 
