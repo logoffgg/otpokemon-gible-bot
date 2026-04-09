@@ -59,7 +59,7 @@ async def run():
                     # Clear processed events
                     await page.evaluate("window.gibleEvents = []")
 
-                await asyncio.sleep(0.5)  # ⚡ near real-time
+                await asyncio.sleep(0.2)  # ⚡ near real-time
 
             except Exception as e:
                 print("Error:", e)
