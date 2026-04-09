@@ -3,6 +3,7 @@ from playwright.async_api import async_playwright
 import requests
 import os
 import re
+import time
 
 DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 
@@ -23,8 +24,20 @@ async def run():
 
         print("🔥 Sniper active...")
 
+        last_ping = 0
+
         while True:
             try:
+                current_time = time.time()
+
+                # 🟢 Heartbeat every 30 minutes
+                if current_time - last_ping > 1800:
+                    requests.post(DISCORD_WEBHOOK, json={
+                        "content": "🟢 Bot online | Monitoring Gible Cave | No crashes detected"
+                    })
+                    print("🟢 Heartbeat sent")
+                    last_ping = current_time
+
                 all_texts = []
 
                 # 🔥 Loop through ALL happening boxes (1–5)
@@ -38,16 +51,11 @@ async def run():
                         all_texts.extend(lines)
 
                 # 🎯 Process all events
+                for text in all_texts:
+                    clean = re.sub(r'[^\w\s]', '', text.lower())
 
-for text in all_texts:
-    # Remove emojis / special characters
-    clean = re.sub(r'[^\w\s]', '', text.lower())
-
-    if "defeated" in clean and "gible" in clean:
-        if text not in sent_messages:
-            sent_messages.add(text)
-            print("🔥 DETECTED:", text)
-            send_to_discord(text)
+                    if "defeated" in clean and "gible" in clean:
+                        if text not in sent_messages:
                             sent_messages.add(text)
                             print("🔥 DETECTED:", text)
                             send_to_discord(text)
