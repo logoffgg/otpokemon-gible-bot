@@ -10,7 +10,10 @@ DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 sent_messages = set()
 
 def send(msg):
-    requests.post(DISCORD_WEBHOOK, json={"content": msg})
+    try:
+        requests.post(DISCORD_WEBHOOK, json={"content": msg})
+    except:
+        pass
 
 async def run():
     while True:
@@ -31,34 +34,30 @@ async def run():
 
                 print("🔥 Sniper active...")
 
-                # 🔥 Inject real-time observer
+                # 🔥 Inject observer
                 await page.evaluate("""
-    window.gibleEvents = [];
+                    window.gibleEvents = [];
 
-    const elements = document.querySelectorAll('.happening');
+                    const elements = document.querySelectorAll('.happening');
 
-    // 🔥 Capture existing events immediately
-    elements.forEach(el => {
-        if (el.innerText && el.innerText.trim()) {
-            window.gibleEvents.push(el.innerText);
-        }
-    });
+                    elements.forEach(el => {
+                        if (el.innerText && el.innerText.trim()) {
+                            window.gibleEvents.push(el.innerText);
+                        }
 
-    // 🔥 Listen for NEW updates
-    elements.forEach(el => {
-        const observer = new MutationObserver(() => {
-            if (el.innerText && el.innerText.trim()) {
-                window.gibleEvents.push(el.innerText);
-            }
-        });
+                        const observer = new MutationObserver(() => {
+                            if (el.innerText && el.innerText.trim()) {
+                                window.gibleEvents.push(el.innerText);
+                            }
+                        });
 
-        observer.observe(el, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-    });
-""")
+                        observer.observe(el, {
+                            childList: true,
+                            subtree: true,
+                            characterData: true
+                        });
+                    });
+                """)
 
                 last_ping = 0
 
@@ -70,32 +69,30 @@ async def run():
                         send("🟢 Bot online")
                         last_ping = current_time
 
-                    # 🔥 Get live events
+                    # 🔥 Get events
                     events = await page.evaluate("window.gibleEvents")
 
-                    # 🔥 Get live events
-events = await page.evaluate("window.gibleEvents")
+                    if events:
+                        for event in events:
+                            key = re.sub(r'[^\w\s]', '', event.lower()).strip()
 
-if events:
-    for event in events:
-        key = re.sub(r'[^\w\s]', '', event.lower()).strip()
+                            # 🔥 Gible
+                            if "gible" in key and "defeat" in key:
+                                if key not in sent_messages:
+                                    sent_messages.add(key)
+                                    print("🔥 DETECTED:", event)
+                                    send(f"🔥 GIBLE: {event}")
 
-        # 🔥 Gible detection
-        if "gible" in key and "defeat" in key:
-            if key not in sent_messages:
-                sent_messages.add(key)
-                print("🔥 DETECTED:", event)
-                send(f"🔥 GIBLE: {event}")
+                            # 🐣 Dungeon
+                            if "easter" in key and "finish" in key:
+                                if key not in sent_messages:
+                                    sent_messages.add(key)
+                                    print("🐣 DUNGEON:", event)
+                                    send(f"🐣 DUNGEON: {event}")
 
-        # 🐣 Easter dungeon
-        if "easter" in key and "finish" in key:
-            if key not in sent_messages:
-                sent_messages.add(key)
-                print("🐣 DUNGEON:", event)
-                send(f"🐣 DUNGEON: {event}")
+                        # clear events
+                        await page.evaluate("window.gibleEvents = []")
 
-    # clear processed events
-    await page.evaluate("window.gibleEvents = []")
                     await asyncio.sleep(1)
 
         except Exception as e:
