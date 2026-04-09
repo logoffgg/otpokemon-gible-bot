@@ -31,6 +31,27 @@ async def run():
 
                 print("🔥 Sniper active...")
 
+                # 🔥 Inject real-time observer
+                await page.evaluate("""
+                    window.gibleEvents = [];
+
+                    const target = document.querySelector('.div-happening');
+
+                    const observer = new MutationObserver(mutations => {
+                        mutations.forEach(mutation => {
+                            mutation.addedNodes.forEach(node => {
+                                if (node.innerText) {
+                                    window.gibleEvents.push(node.innerText);
+                                }
+                            });
+                        });
+                    });
+
+                    if (target) {
+                        observer.observe(target, { childList: true, subtree: true });
+                    }
+                """)
+
                 last_ping = 0
 
                 while True:
@@ -41,41 +62,31 @@ async def run():
                         send("🟢 Bot online")
                         last_ping = current_time
 
-                    # 🔥 Wait until feed has content
-                    container = None
-                    text = ""
+                    # 🔥 Get live events
+                    events = await page.evaluate("window.gibleEvents")
 
-                    for _ in range(10):
-                        container = await page.query_selector(".div-happening")
-                        if container:
-                            text = await container.inner_text()
-                            if text.strip():
-                                break
-                        await asyncio.sleep(1)
+                    if events:
+                        for event in events:
+                            clean = re.sub(r'[^\w\s]', '', event.lower())
 
-                    # 🎯 Process events
-                    if container and text.strip():
-                        lines = text.split("\n")
-                        print("EVENTS:", lines)
-
-                        for t in lines:
-                            clean = re.sub(r'[^\w\s]', '', t.lower())
-
-                            # 🔥 Gible
+                            # 🔥 Gible detection
                             if "gible" in clean and "defeat" in clean:
-                                if t not in sent_messages:
-                                    sent_messages.add(t)
-                                    print("🔥 DETECTED:", t)
-                                    send(f"🔥 GIBLE: {t}")
+                                if event not in sent_messages:
+                                    sent_messages.add(event)
+                                    print("🔥 DETECTED:", event)
+                                    send(f"🔥 GIBLE: {event}")
 
-                            # 🐣 Dungeon
+                            # 🐣 Easter dungeon
                             if "easter" in clean and "finish" in clean:
-                                if t not in sent_messages:
-                                    sent_messages.add(t)
-                                    print("🐣 DUNGEON:", t)
-                                    send(f"🐣 DUNGEON: {t}")
+                                if event not in sent_messages:
+                                    sent_messages.add(event)
+                                    print("🐣 DUNGEON:", event)
+                                    send(f"🐣 DUNGEON: {event}")
 
-                    await asyncio.sleep(2)
+                        # clear processed events
+                        await page.evaluate("window.gibleEvents = []")
+
+                    await asyncio.sleep(1)
 
         except Exception as e:
             print("🔥 Browser crashed, restarting...", e)
