@@ -1,68 +1,55 @@
 import asyncio
 from playwright.async_api import async_playwright
 import requests
-
 import os
+
 DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 
 sent_messages = set()
 
 def send_to_discord(message):
-    data = {"content": f"🔥 GIBLE SNIPED: {message}"}
-    requests.post(DISCORD_WEBHOOK, json=data)
+    requests.post(DISCORD_WEBHOOK, json={"content": f"🔥 GIBLE SNIPED: {message}"})
 
 async def run():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
         page = await browser.new_page()
 
         await page.goto("https://otpokemon.com")
-        requests.post(DISCORD_WEBHOOK, json={"content": "🟢 Bot is now online"})
 
-        print("🔥 Sniper active... waiting for Gible")
-
-        # Inject observer into the page (REAL-TIME DOM listener)
-        await page.evaluate("""
-        window.gibleEvents = [];
-
-        const target = document.querySelector('.div-happening');
-
-        if (target) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.innerText) {
-                            window.gibleEvents.push(node.innerText);
-                        }
-                    });
-                });
-            });
-
-            observer.observe(target, { childList: true, subtree: true });
-        }
-        """)
+        print("🔥 Sniper active...")
 
         while True:
             try:
-                events = await page.evaluate("window.gibleEvents")
+                all_texts = []
 
-                if events:
-                    for text in events:
-                        text_lower = text.lower()
+                # 🔥 Loop through ALL happening boxes (1–5)
+                for i in range(1, 6):
+                    selector = f".div-happening-{i}"
+                    container = await page.query_selector(selector)
 
-                        if "defeated a special" in text_lower and "Gible" in text_lower:
-                            if text not in sent_messages:
-                                sent_messages.add(text)
-                                print("🔥 SNIPED:", text)
-                                send_to_discord(text)
+                    if container:
+                        text = await container.inner_text()
+                        lines = text.split("\n")
+                        all_texts.extend(lines)
 
-                    # Clear processed events
-                    await page.evaluate("window.gibleEvents = []")
+                # 🎯 Process all events
+                for text in all_texts:
+                    text_lower = text.lower()
 
-                await asyncio.sleep(0.2)  # ⚡ near real-time
+                    if "gible" in text_lower and "defeated" in text_lower:
+                        if text not in sent_messages:
+                            sent_messages.add(text)
+                            print("🔥 DETECTED:", text)
+                            send_to_discord(text)
+
+                await asyncio.sleep(1)
 
             except Exception as e:
                 print("Error:", e)
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
 
 asyncio.run(run())
