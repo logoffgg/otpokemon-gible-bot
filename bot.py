@@ -1,63 +1,70 @@
+import asyncio
+from playwright.async_api import async_playwright
 import requests
-import time
-import re
-from bs4 import BeautifulSoup
 import os
+import re
+import time
 
 DISCORD_WEBHOOK = os.getenv("WEBHOOK")
 
 sent_messages = set()
-last_ping = 0
 
 def send(msg):
     requests.post(DISCORD_WEBHOOK, json={"content": msg})
 
-print("🔥 Lightweight sniper active...")
+async def run():
+    while True:  # 🔁 auto-restart browser if it crashes
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu"
+                    ]
+                )
 
-while True:
-    try:
-        current_time = time.time()
+                page = await browser.new_page()
+                await page.goto("https://otpokemon.com")
 
-        # 🟢 Heartbeat
-        if current_time - last_ping > 1800:
-            send("🟢 Bot online | Lightweight mode active")
-            print("🟢 Heartbeat sent")
-            last_ping = current_time
+                print("🔥 Sniper active...")
 
-        # 🌐 Fetch page
-        res = requests.get("https://otpokemon.com")
-        soup = BeautifulSoup(res.text, "html.parser")
+                last_ping = 0
 
-        all_texts = []
+                while True:
+                    current_time = time.time()
 
-        # 🔥 Get all 5 happening boxes
-        for i in range(1, 6):
-            div = soup.select_one(f".div-happening-{i}")
-            if div:
-                lines = div.get_text("\n").split("\n")
-                all_texts.extend(lines)
+                    # 🟢 Heartbeat
+                    if current_time - last_ping > 1800:
+                        send("🟢 Bot online")
+                        last_ping = current_time
 
-        print("EVENTS:", all_texts)
+                    container = await page.query_selector(".div-happening")
 
-        for text in all_texts:
-            clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
+                    if container:
+                        text = await container.inner_text()
+                        lines = text.split("\n")
 
-            # 🔥 Gible
-            if "gible" in clean and "defeat" in clean:
-                if text not in sent_messages:
-                    sent_messages.add(text)
-                    print("🔥 DETECTED:", text)
-                    send(f"🔥 GIBLE SNIPED: {text}")
+                        print("EVENTS:", lines)
 
-            # 🐣 Easter Dungeon
-            if "easter" in clean and "dungeon" in clean and "finish" in clean:
-                if text not in sent_messages:
-                    sent_messages.add(text)
-                    print("🐣 DUNGEON:", text)
-                    send(f"🐣 EASTER DUNGEON: {text}")
+                        for t in lines:
+                            clean = re.sub(r'[^\w\s]', '', t.lower())
 
-        time.sleep(2)
+                            if "gible" in clean and "defeat" in clean:
+                                if t not in sent_messages:
+                                    sent_messages.add(t)
+                                    send(f"🔥 GIBLE: {t}")
 
-    except Exception as e:
-        print("Error:", e)
-        time.sleep(4)
+                            if "easter" in clean and "finish" in clean:
+                                if t not in sent_messages:
+                                    sent_messages.add(t)
+                                    send(f"🐣 DUNGEON: {t}")
+
+                    await asyncio.sleep(2)
+
+        except Exception as e:
+            print("🔥 Browser crashed, restarting...", e)
+            await asyncio.sleep(5)
+
+asyncio.run(run())
