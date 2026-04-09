@@ -14,20 +14,20 @@ def send_to_discord(message):
 
 async def run():
     async with async_playwright() as p:
-      browser = await p.chromium.launch(
-    headless=True,
-    args=[
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-software-rasterizer",
-        "--disable-setuid-sandbox",
-        "--single-process",
-        "--no-zygote"
-    ]
-)
-        page = await browser.new_page()
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-setuid-sandbox",
+                "--single-process",
+                "--no-zygote"
+            ]
+        )
 
+        page = await browser.new_page()
         await page.goto("https://otpokemon.com")
 
         print("🔥 Sniper active...")
@@ -38,7 +38,7 @@ async def run():
             try:
                 current_time = time.time()
 
-                # 🟢 Heartbeat every 30 minutes
+                # 🟢 Heartbeat
                 if current_time - last_ping > 1800:
                     requests.post(DISCORD_WEBHOOK, json={
                         "content": "🟢 Bot online | Monitoring Gible Cave | No crashes detected"
@@ -46,9 +46,14 @@ async def run():
                     print("🟢 Heartbeat sent")
                     last_ping = current_time
 
+                # 🔄 Refresh page every 5 minutes (prevents freeze)
+                if int(current_time) % 300 == 0:
+                    await page.reload()
+                    print("🔄 Page refreshed")
+
                 all_texts = []
 
-                # 🔥 Loop through ALL happening boxes (1–5)
+                # 🔥 Read all 5 event boxes
                 for i in range(1, 6):
                     selector = f".div-happening-{i}"
                     container = await page.query_selector(selector)
@@ -58,26 +63,28 @@ async def run():
                         lines = text.split("\n")
                         all_texts.extend(lines)
 
-                # 🎯 Process all events
+                # 👀 DEBUG (shows what's actually being read)
+                print("EVENTS:", all_texts)
+
+                # 🎯 Process events
                 for text in all_texts:
-                    print("EVENTS:", all_texts)
                     clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
 
-# 🔥 Gible detection (super flexible)
-if "gible" in clean and "defeat" in clean:
-    if text not in sent_messages:
-        sent_messages.add(text)
-        print("🔥 DETECTED:", text)
-        send_to_discord(text)
+                    # 🔥 Gible
+                    if "gible" in clean and "defeat" in clean:
+                        if text not in sent_messages:
+                            sent_messages.add(text)
+                            print("🔥 DETECTED:", text)
+                            send_to_discord(text)
 
-# 🐣 Dungeon detection (super flexible)
-if "easter" in clean and "dungeon" in clean and "finish" in clean:
-    if text not in sent_messages:
-        sent_messages.add(text)
-        print("🐣 DUNGEON:", text)
-        requests.post(DISCORD_WEBHOOK, json={
-            "content": f"🐣 EASTER DUNGEON: {text}"
-        })
+                    # 🐣 Easter Dungeon
+                    if "easter" in clean and "dungeon" in clean and "finish" in clean:
+                        if text not in sent_messages:
+                            sent_messages.add(text)
+                            print("🐣 DUNGEON:", text)
+                            requests.post(DISCORD_WEBHOOK, json={
+                                "content": f"🐣 EASTER DUNGEON: {text}"
+                            })
 
                 await asyncio.sleep(1)
 
