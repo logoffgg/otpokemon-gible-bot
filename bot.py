@@ -17,7 +17,7 @@ def send(msg):
 
 
 async def run():
-    while True:  # 🔁 auto-restart if browser crashes
+    while True:
         try:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(
@@ -34,19 +34,17 @@ async def run():
 
                 print("🔥 Sniper active...")
 
-                # 🔥 Inject observer (real-time)
+                # 🔥 Inject observer (real-time events)
                 await page.evaluate("""
                     window.gibleEvents = [];
 
                     const elements = document.querySelectorAll('.happening');
 
                     elements.forEach(el => {
-                        // capture existing
                         if (el.innerText && el.innerText.trim()) {
                             window.gibleEvents.push(el.innerText);
                         }
 
-                        // listen for changes
                         const observer = new MutationObserver(() => {
                             if (el.innerText && el.innerText.trim()) {
                                 window.gibleEvents.push(el.innerText);
@@ -66,44 +64,56 @@ async def run():
                 while True:
                     current_time = time.time()
 
-                    # 🟢 Heartbeat every 30 minutes
+                    # 🟢 Heartbeat
                     if current_time - last_ping > 1800:
-                        send("🟢 Bot online | Gible sniper active")
+                        send("🟢 Bot online | Red Gible sniper active")
                         last_ping = current_time
 
-                    # 🔥 Get real-time events
+                    # 🔥 Get observer events
                     events = await page.evaluate("window.gibleEvents")
 
-                    # 🔁 FALLBACK: scan DOM directly (VERY IMPORTANT)
-                    fallback_elements = await page.query_selector_all(".happening")
-                    fallback_events = []
-                    for el in fallback_elements:
+                    # 🔁 Fallback scan (important)
+                    elements = await page.query_selector_all(".happening")
+
+                    for el in elements:
                         text = await el.inner_text()
-                        if text.strip():
-                            fallback_events.append(text)
+                        if not text.strip():
+                            continue
 
-                    # merge both sources
-                    all_events = list(set(events + fallback_events))
+                        key = re.sub(r'[^\w\s]', '', text.lower()).strip()
 
-                    if all_events:
-                        for event in all_events:
-                            key = re.sub(r'[^\w\s]', '', event.lower()).strip()
+                        # 🔴 DETECT SERVER COLOR
+                        is_red = False
 
-                            # 🔥 Gible detection
-                            if "gible" in key and "defeat" in key:
-                                if key not in sent_messages:
-                                    sent_messages.add(key)
-                                    print("🔥 GIBLE:", event)
-                                    send(f"🔥 GIBLE SNIPED: {event}")
+                        # Try class-based detection
+                        color_el = await el.query_selector("span, div")
+                        if color_el:
+                            class_name = await color_el.get_attribute("class") or ""
+                            style = await color_el.get_attribute("style") or ""
 
-                            # 🐣 Easter dungeon
-                            if "easter" in key and "finish" in key:
-                                if key not in sent_messages:
-                                    sent_messages.add(key)
-                                    print("🐣 DUNGEON:", event)
-                                    send(f"🐣 EASTER DUNGEON: {event}")
+                            # 🔴 Check class name
+                            if "red" in class_name.lower():
+                                is_red = True
 
-                    # clear real-time queue
+                            # 🔴 Check inline style color (fallback)
+                            if "rgb(255, 0, 0)" in style or "#ff0000" in style:
+                                is_red = True
+
+                        # 🔥 GIBLE RED ONLY
+                        if is_red and "gible" in key and "defeat" in key:
+                            if key not in sent_messages:
+                                sent_messages.add(key)
+                                print("🔴 GIBLE:", text)
+                                send(f"🔴 GIBLE RED SERVER: {text}")
+
+                        # 🐣 Easter dungeon (optional filter)
+                        if "easter" in key and "finish" in key:
+                            if key not in sent_messages:
+                                sent_messages.add(key)
+                                print("🐣 DUNGEON:", text)
+                                send(f"🐣 EASTER DUNGEON: {text}")
+
+                    # clear observer queue
                     await page.evaluate("window.gibleEvents = []")
 
                     await asyncio.sleep(2)
