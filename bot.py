@@ -33,24 +33,32 @@ async def run():
 
                 # 🔥 Inject real-time observer
                 await page.evaluate("""
-                    window.gibleEvents = [];
+    window.gibleEvents = [];
 
-                    const target = document.querySelector('.div-happening');
+    const elements = document.querySelectorAll('.happening');
 
-                    const observer = new MutationObserver(mutations => {
-                        mutations.forEach(mutation => {
-                            mutation.addedNodes.forEach(node => {
-                                if (node.innerText) {
-                                    window.gibleEvents.push(node.innerText);
-                                }
-                            });
-                        });
-                    });
+    // 🔥 Capture existing events immediately
+    elements.forEach(el => {
+        if (el.innerText && el.innerText.trim()) {
+            window.gibleEvents.push(el.innerText);
+        }
+    });
 
-                    if (target) {
-                        observer.observe(target, { childList: true, subtree: true });
-                    }
-                """)
+    // 🔥 Listen for NEW updates
+    elements.forEach(el => {
+        const observer = new MutationObserver(() => {
+            if (el.innerText && el.innerText.trim()) {
+                window.gibleEvents.push(el.innerText);
+            }
+        });
+
+        observer.observe(el, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    });
+""")
 
                 last_ping = 0
 
@@ -66,25 +74,25 @@ async def run():
                     events = await page.evaluate("window.gibleEvents")
 
                     if events:
-                        for event in events:
-                            clean = re.sub(r'[^\w\s]', '', event.lower())
+    for event in events:
+        key = re.sub(r'[^\w\s]', '', event.lower()).strip()
 
-                            # 🔥 Gible detection
-                            if "gible" in clean and "defeat" in clean:
-                                if event not in sent_messages:
-                                    sent_messages.add(event)
-                                    print("🔥 DETECTED:", event)
-                                    send(f"🔥 GIBLE: {event}")
+        # 🔥 Gible detection
+        if "gible" in key and "defeat" in key:
+            if key not in sent_messages:
+                sent_messages.add(key)
+                print("🔥 DETECTED:", event)
+                send(f"🔥 GIBLE: {event}")
 
-                            # 🐣 Easter dungeon
-                            if "easter" in clean and "finish" in clean:
-                                if event not in sent_messages:
-                                    sent_messages.add(event)
-                                    print("🐣 DUNGEON:", event)
-                                    send(f"🐣 DUNGEON: {event}")
+        # 🐣 Easter dungeon
+        if "easter" in key and "finish" in key:
+            if key not in sent_messages:
+                sent_messages.add(key)
+                print("🐣 DUNGEON:", event)
+                send(f"🐣 DUNGEON: {event}")
 
-                        # clear processed events
-                        await page.evaluate("window.gibleEvents = []")
+    # clear processed events
+    await page.evaluate("window.gibleEvents = []")
 
                     await asyncio.sleep(1)
 
