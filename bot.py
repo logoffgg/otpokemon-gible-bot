@@ -73,7 +73,10 @@ async def run():
                     # 🔥 Get live events
                     events = await page.evaluate("window.gibleEvents")
 
-                    if events:
+                    # 🔥 Get live events
+events = await page.evaluate("window.gibleEvents")
+
+if events:
     for event in events:
         key = re.sub(r'[^\w\s]', '', event.lower()).strip()
 
@@ -93,7 +96,6 @@ async def run():
 
     # clear processed events
     await page.evaluate("window.gibleEvents = []")
-
                     await asyncio.sleep(1)
 
         except Exception as e:
