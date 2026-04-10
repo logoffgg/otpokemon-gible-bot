@@ -83,7 +83,7 @@ async def run():
                         key = re.sub(r'[^\w\s]', '', text.lower()).strip()
 
                         # 🔴 DETECT SERVER COLOR
-                        is_red = False
+                        is_red = True
 
                         # Try class-based detection
                         color_el = await el.query_selector("span, div")
