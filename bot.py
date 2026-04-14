@@ -30,11 +30,11 @@ async def run():
                 )
 
                 page = await browser.new_page()
-                await page.goto("https://otpokemon.com", wait_until="networkidle")
+                await page.goto("https://www.ryudophoenix.com/gible-cave", wait_until="networkidle")
 
                 print("🔥 Sniper active...")
 
-                # 🔥 Inject observer (real-time events)
+                # Inject observer
                 await page.evaluate("""
                     window.gibleEvents = [];
 
@@ -69,10 +69,7 @@ async def run():
                         send("🟢 Bot online | Red Gible sniper active")
                         last_ping = current_time
 
-                    # 🔥 Get observer events
-                    events = await page.evaluate("window.gibleEvents")
-
-                    # 🔁 Fallback scan (important)
+                    # Fallback scan
                     elements = await page.query_selector_all(".happening")
 
                     for el in elements:
@@ -80,41 +77,25 @@ async def run():
                         if not text.strip():
                             continue
 
-                        key = re.sub(r'[^\w\s]', '', text.lower()).strip()
+                        clean_text = text.lower()
+                        key = re.sub(r'[^\w\s]', '', clean_text).strip()
 
-                        # 🔴 DETECT SERVER COLOR
-                        is_red = True
+                        # 🔴 NEW LOGIC (TEXT-BASED)
+                        is_mundo_red = "mundo red" in clean_text
 
-                        # Try class-based detection
-                        color_el = await el.query_selector("span, div")
-                        if color_el:
-                            class_name = await color_el.get_attribute("class") or ""
-                            style = await color_el.get_attribute("style") or ""
-
-                            # 🔴 Check class name
-                            if "red" in class_name.lower():
-                                is_red = True
-
-                            # 🔴 Check inline style color (fallback)
-                            if "rgb(255, 0, 0)" in style or "#ff0000" in style:
-                                is_red = True
-
-                        # 🔥 GIBLE RED ONLY
-                        if is_red and "gible" in key and "defeat" in key:
+                        # 🔥 GIBLE RED ONLY (based on text)
+                        if is_mundo_red and "gible" in clean_text and "defeat" in clean_text:
                             if key not in sent_messages:
                                 sent_messages.add(key)
-                                print("🔴 GIBLE:", text)
-                                send(f"🔴 GIBLE RED SERVER: {text}")
+                                print("🔴 GIBLE (MUNDO RED):", text)
+                                send(f"🔴 GIBLE MUNDO RED: {text}")
 
-                        # 🐣 Easter dungeon (optional filter)
-                        if "easter" in key and "finish" in key:
+                        # 🐣 Easter dungeon (optional)
+                        if "easter" in clean_text and "finish" in clean_text:
                             if key not in sent_messages:
                                 sent_messages.add(key)
                                 print("🐣 DUNGEON:", text)
                                 send(f"🐣 EASTER DUNGEON: {text}")
-
-                    # clear observer queue
-                    await page.evaluate("window.gibleEvents = []")
 
                     await asyncio.sleep(2)
 
